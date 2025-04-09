@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Response, UploadFile
 from model_loader import predict_image
 import uvicorn
 import shutil
@@ -19,8 +19,14 @@ class_mapping = {
 
 
 @app.get("/")
+@app.head("/")
 def home():
     return {"message": "Fake Shoe Detection API is running"}
+
+@app.get("/health")
+@app.head("/health")
+def health_check():
+    return Response(content="OK", status_code=200)
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
