@@ -6,6 +6,13 @@ import shutil
 import os
 import time
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from pydantic import BaseModel
+import smtplib
+from email.message import EmailMessage
+import os
+class SubscribeRequest(BaseModel):
+    email: str
 
 load_dotenv()
 
@@ -71,6 +78,37 @@ async def predict(file: UploadFile = File(...)):
             "inference_time_sec": inference_time
         }
     }
+
+@app.post("/subscribe")
+def subscribe(request: SubscribeRequest):
+    receiver_email = request.email
+    subject = "You're Subscribed to Shoe Detection Updates 👟"
+    body = f"Hello,\n\nThank you for subscribing with {receiver_email}!\nYou'll now receive updates."
+
+    try:
+        send_email(receiver_email, subject, body)
+        save_email(receiver_email)  # Save the email
+        return {"message": "You're now subscribed! 🎉"}
+    except Exception as e:
+        return {"message": f"Failed to send email: {str(e)}"}
+
+def send_email(to_email: str, subject: str, body: str):
+    EMAIL = os.getenv("EMAIL_HOST")            # Your Gmail e.g., your_email@gmail.com
+    PASSWORD = os.getenv("EMAIL_PASSWORD")     # App password, not Gmail password
+
+    msg = EmailMessage()
+    msg["From"] = EMAIL
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.set_content(body)
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        smtp.login(EMAIL, PASSWORD)
+        smtp.send_message(msg)
+
+def save_email(email: str, file_path: str = "subscribers.txt"):
+    with open(file_path, "a") as file:
+        file.write(email + "\n")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
